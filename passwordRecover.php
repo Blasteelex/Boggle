@@ -25,20 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail = new PHPMailer(true);
         try {
             $mail->isSMTP();
-            $mail->Host       = 'partage.univ-eiffel.fr';
+            $mail->Host       = getenv('SMTP_HOST');
             $mail->SMTPAuth   = true;
             $mail->Username   = getenv('SMTP_USER');
             $mail->Password   = getenv('SMTP_PASS');
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = (int) getenv('SMTP_PORT');
             $mail->CharSet    = 'UTF-8';
+            $mail->Timeout    = 10;
 
-            $mail->setFrom(getenv('SMTP_USER'), 'Boggle Admin');
-            $mail->addAddress($email);
-            $mail->isHTML(true);
-            $mail->Subject = 'Réinitialisation de ton mot de passe';
-            $mail->Body    = "Clique ici pour réinitialiser ton mot de passe (valable 1h) : <a href='$resetLink'>Réinitialiser</a>";
-            $mail->send();
+            $mail->setFrom(getenv('SMTP_FROM'), 'Boggle Admin');
         } catch (Exception $e) {
             error_log("Erreur mail : " . $mail->ErrorInfo);
         }
