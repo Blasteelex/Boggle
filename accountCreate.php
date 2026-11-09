@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: login.php');
         exit;
     } catch (PDOException $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log($e->getMessage());
         $error = "Pseudo ou email déjà utilisé.";
     }
 }

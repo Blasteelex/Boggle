@@ -47,3 +47,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $msg = "Si l'adresse existe, un email a été envoyé.";
 }
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Récupération</title>
+</head>
+<body>
+<?php if (isset($msg)) echo "<p>" . htmlspecialchars($msg) . "</p>"; ?>
+<form method="POST">
+    <input type="email" name="email" placeholder="Email" required>
+    <button type="submit">Envoyer le lien</button>
+</form>
+<a href="login.php">Retour à la connexion</a>
+</body>
+</html>
