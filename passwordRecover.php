@@ -1,0 +1,49 @@
+<?php
+require 'db.php';
+require 'vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $_POST['email'];
+
+    $stmt = $pdo->prepare("SELECT id_user FROM profils WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user) {
+        $token = bin2hex(random_bytes(32));
+
+        // On stocke seulement le hash du token ; NOW() évite les soucis de fuseau horaire
+        $update = $pdo->prepare(
+                "UPDATE utilisateurs SET reset_token = ?, reset_expires = NOW() + INTERVAL '1 hour' WHERE id_user = ?"
+        );
+        $update->execute([hash('sha256', $token), $user['id_user']]);
+
+        $resetLink = getenv('APP_URL') . "/passwordReset.php?token=" . $token;
+
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'partage.univ-eiffel.fr';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = getenv('SMTP_USER');
+            $mail->Password   = getenv('SMTP_PASS');
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            $mail->Port       = 465;
+            $mail->CharSet    = 'UTF-8';
+
+            $mail->setFrom(getenv('SMTP_USER'), 'Boggle Admin');
+            $mail->addAddress($email);
+            $mail->isHTML(true);
+            $mail->Subject = 'Réinitialisation de ton mot de passe';
+            $mail->Body    = "Clique ici pour réinitialiser ton mot de passe (valable 1h) : <a href='$resetLink'>Réinitialiser</a>";
+            $mail->send();
+        } catch (Exception $e) {
+            error_log("Erreur mail : " . $mail->ErrorInfo);
+        }
+    }
+    // Même message dans tous les cas (on ne révèle pas si l'email existe)
+    $msg = "Si l'adresse existe, un email a été envoyé.";
+}
+?>

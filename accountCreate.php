@@ -1,16 +1,27 @@
 <?php
 require 'db.php';
 
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pseudo = $_POST['pseudo'];
-    $email = $_POST['email'];
-    $mdp = password_hash($_POST['mdp'], PASSWORD_DEFAULT);
+    $pseudo = trim($_POST['pseudo']);
+    $email  = trim($_POST['email']);
+    $mdp    = password_hash($_POST['mdp'], PASSWORD_DEFAULT);
 
-    $stmt = $pdo->prepare("INSERT INTO utilisateurs (pseudo, email, password) VALUES (?, ?, ?)");
-    $stmt->execute([$pseudo, $email, $mdp]);
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("INSERT INTO utilisateurs (pseudo, mot_de_passe_hash) VALUES (?, ?) RETURNING id_user");
+        $stmt->execute([$pseudo, $mdp]);
+        $idUser = $stmt->fetchColumn();
 
-    header('Location: login.php');
-    exit;
+        $pdo->prepare("INSERT INTO profils (id_user, email) VALUES (?, ?)")->execute([$idUser, $email]);
+        $pdo->commit();
+
+        header('Location: login.php');
+        exit;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        $error = "Pseudo ou email déjà utilisé.";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -20,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Création de compte</title>
 </head>
 <body>
+<?php if ($error) echo "<p>$error</p>"; ?>
 <form method="POST">
     <input type="text" name="pseudo" placeholder="Pseudo" required>
     <input type="email" name="email" placeholder="Email" required>
